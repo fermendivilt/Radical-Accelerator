@@ -4,7 +4,7 @@
 
 <div style="display: flex; flex-direction:row; justify-content:flex-end;">
 
-    <MudField Style="width:10%;" Disabled="true" Label="Balance" Variant="Variant.Text">@String.Format("{0:P2}.", Balance)</MudField>
+    <MudField Style="width:10%;" Disabled="true" Label="Balance" Variant="Variant.Text">@String.Format("{0:P2}", Balance)</MudField>
 </div>
 
 <div style="display:flex; flex-direction:row; flex-wrap:wrap; align-items:start; margin: 20px 0;">
@@ -145,7 +145,7 @@
             TotalRoI += month.ReturnOfInvestment;
         }
 
-        Balance = TotalRoI / TotalDebt * 100;
+        Balance = TotalRoI / TotalDebt;
     }
 
     void DebtPercentageCalculator(Month month)
