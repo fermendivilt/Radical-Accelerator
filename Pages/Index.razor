@@ -1,0 +1,144 @@
+﻿@page "/"
+
+<PageTitle>Radical Accelerator</PageTitle>
+
+<div style="display:flex; flex-direction:row; flex-wrap:wrap; align-items:start; margin: 20px 0;">
+    <MudNumericField Style="width:10%;" @bind-Value="MonthsNumber" Label="Months" Variant="Variant.Text" Min="6" Max="24" />
+    <MudButton Style="width:10%;" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Button" OnClick="GenerateMonths">Enter</MudButton>
+</div>
+
+<div style="display:flex; flex-direction:column; flex-wrap:wrap; justify-items:end; margin: 20px 0;">
+    <MudNumericField Style="width:20%;" @bind-Value="ValueReference" Immediate="true" Label="Value Reference" Variant="Variant.Text" />
+    <MudNumericField Style="width:20%;" @bind-Value="TeamReference" Immediate="true" Label="Team Reference" Variant="Variant.Text" Min="1" />
+    <MudNumericField Style="width:20%;" @bind-Value="TotalReference" Disabled="true" Label="Total Reference" Variant="Variant.Text" />
+</div>
+
+<div style="display:flex; flex-direction:row; flex-wrap:wrap;">
+    @foreach (Month month in Months)
+    {
+        <MudPaper Class="pa-16 ma-2" Elevation="3" Width="23%">
+
+            <MudNumericField Value="month.PaymentDone" Label="Payment" Variant="Variant.Text" ValueChanged="(double value) => MonthDebtCalculate(value, month)" />
+            <MudNumericField @bind-Value="month.DebtGenerated" Disabled="true" Label="Debt" Variant="Variant.Text" />
+            <MudNumericField @bind-Value="month.ReturnOfInvestment" Disabled="true" Label="Return of Investment" Variant="Variant.Text" />
+        </MudPaper>
+    }
+</div>
+
+<div hidden="@(!HideTotals)" style="width:30%;">
+    <MudNumericField @bind-Value="TotalDebt" Disabled="true" Label="Total Debt" Variant="Variant.Text" />
+    <MudNumericField @bind-Value="TotalPaid" Disabled="true" Label="Total Paid" Variant="Variant.Text" />
+    <MudNumericField @bind-Value="TotalRoI" Disabled="true" Label="Total Return of Investment" Variant="Variant.Text" />
+</div>
+
+
+
+@code {
+    public class Month
+    {
+        public double PaymentDone { get; set; } = 0;
+        public double DebtGenerated { get; set; } = 0;
+        public double Percentage { get; set; } = 0;
+        public double ReturnOfInvestment { get; set; } = 0;
+    }
+
+    public List<Month> Months { get; set; } = new();
+    public int MonthsNumber { get; set; } = 6;
+    public bool HideTotals { get; set; } = false;
+    public List<double> DebtPercents { get; set; } = new() { 1.5, 1.35, 1.25, 1.15 };
+
+    double _ValueReference = 0;
+    public double ValueReference
+    {
+        get => _ValueReference;
+        set
+        {
+            _ValueReference = value;
+            CalculateTotalReference();
+        }
+    } //Redondear a dos decimales
+    int _TeamReference = 1;
+    public int TeamReference
+    {
+        get => _TeamReference;
+        set
+        {
+            _TeamReference = value;
+            CalculateTotalReference();
+        }
+    }
+    public double TotalReference { get; set; } = 0; //Redondear a dos decimales
+
+    public double TotalDebt { get; set; } = 0;
+    public double TotalPaid { get; set; } = 0;
+    public double TotalRoI { get; set; } = 0;
+
+    void GenerateMonths()
+    {
+        for (int month = 0; month < MonthsNumber; month++)
+        {
+            Months.Add(new Month());
+        }
+
+        HideTotals = true;
+    }
+
+    void CalculateTotalReference() => TotalReference = ValueReference * TeamReference;
+
+    void MonthDebtCalculate(double valueChanged, Month month)
+    {
+        month.PaymentDone = valueChanged;
+
+        if (month.PaymentDone >= ValueReference && month.PaymentDone < TotalReference)
+        {
+            if (month.PaymentDone >= (ValueReference * (DebtPercents.Count + 1)))
+            {
+                month.DebtGenerated = 0;
+            }
+            else
+            {
+                DebtPercentageCalculator(month);
+                month.DebtGenerated = (TotalReference - month.PaymentDone) * month.Percentage;
+                TotalDebt += month.DebtGenerated;
+            }
+        }
+        else
+        {
+            month.DebtGenerated = 0;
+            month.ReturnOfInvestment = month.PaymentDone - TotalReference;
+        }
+
+        ProjectTotals();
+    }
+
+    void ProjectTotals()
+    {
+        TotalDebt = 0;
+        TotalPaid = 0;
+        TotalRoI = 0;
+
+        foreach (Month month in Months)
+        {
+            TotalDebt += month.DebtGenerated;
+            TotalPaid += month.PaymentDone;
+            TotalRoI += month.ReturnOfInvestment;
+        }
+    }
+
+    void DebtPercentageCalculator(Month month)
+    {
+        int valueReferenceThreshold = 1;
+
+        foreach (double percent in DebtPercents)
+        {
+
+            if (month.PaymentDone <= ValueReference * valueReferenceThreshold)
+            {
+                month.Percentage = percent;
+                return;
+            }
+
+            valueReferenceThreshold++;
+        }
+    }
+}
