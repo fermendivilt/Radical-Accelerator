@@ -2,6 +2,11 @@
 
 <PageTitle>Radical Accelerator</PageTitle>
 
+<div style="display: flex; flex-direction:row; justify-content:flex-end;">
+
+    <MudField Style="width:10%;" Disabled="true" Label="Balance" Variant="Variant.Text">@String.Format("{0:P2}.", Balance)</MudField>
+</div>
+
 <div style="display:flex; flex-direction:row; flex-wrap:wrap; align-items:start; margin: 20px 0;">
     <MudNumericField Style="width:10%;" @bind-Value="MonthsNumber" Label="Months" Variant="Variant.Text" Min="6" Max="24" />
     <MudButton Style="width:10%;" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Button" OnClick="GenerateMonths">Enter</MudButton>
@@ -21,6 +26,10 @@
             <MudNumericField Value="month.PaymentDone" Label="Payment" Variant="Variant.Text" ValueChanged="(double value) => MonthDebtCalculate(value, month)" />
             <MudNumericField @bind-Value="month.DebtGenerated" Disabled="true" Label="Debt" Variant="Variant.Text" />
             <MudNumericField @bind-Value="month.ReturnOfInvestment" Disabled="true" Label="Return of Investment" Variant="Variant.Text" />
+
+            <MudField Disabled="true" Label="Interest percentage" Variant="Variant.Text">
+                @String.Format("{0:P2}.", month.Percentage)
+            </MudField>
         </MudPaper>
     }
 </div>
@@ -47,6 +56,7 @@
     public bool HideTotals { get; set; } = false;
     public List<double> DebtPercents { get; set; } = new() { 1.5, 1.35, 1.25, 1.15 };
 
+    public double Balance { get; set; } = 0;
     double _ValueReference = 0;
     public double ValueReference
     {
@@ -75,6 +85,8 @@
 
     void GenerateMonths()
     {
+        Months = new();
+
         for (int month = 0; month < MonthsNumber; month++)
         {
             Months.Add(new Month());
@@ -89,15 +101,23 @@
     {
         month.PaymentDone = valueChanged;
 
-        if (month.PaymentDone >= ValueReference && month.PaymentDone < TotalReference)
+        if (month.PaymentDone < ValueReference)
+        {
+            month.DebtGenerated = 0;
+            month.Percentage = 0;
+            month.ReturnOfInvestment = 0;
+        }
+        else if (month.PaymentDone >= ValueReference && month.PaymentDone < TotalReference)
         {
             if (month.PaymentDone >= (ValueReference * (DebtPercents.Count + 1)))
             {
                 month.DebtGenerated = 0;
+                month.Percentage = 0;
             }
             else
             {
                 DebtPercentageCalculator(month);
+                month.ReturnOfInvestment = 0;
                 month.DebtGenerated = (TotalReference - month.PaymentDone) * month.Percentage;
                 TotalDebt += month.DebtGenerated;
             }
@@ -105,6 +125,7 @@
         else
         {
             month.DebtGenerated = 0;
+            month.Percentage = 0;
             month.ReturnOfInvestment = month.PaymentDone - TotalReference;
         }
 
@@ -123,6 +144,8 @@
             TotalPaid += month.PaymentDone;
             TotalRoI += month.ReturnOfInvestment;
         }
+
+        Balance = TotalRoI / TotalDebt * 100;
     }
 
     void DebtPercentageCalculator(Month month)
